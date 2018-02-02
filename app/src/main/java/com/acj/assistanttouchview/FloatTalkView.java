@@ -30,7 +30,6 @@ import java.lang.reflect.Method;
 public class FloatTalkView extends RelativeLayout {
 
 
-    private VoiceRecordHelper voiceRecordHelper; //声音获取工具
     private VoiceView voiceView;
     private ImageView btnQuestion;
     private OnFloatTalkEvent onFloatTalkEvent;
@@ -69,19 +68,6 @@ public class FloatTalkView extends RelativeLayout {
             }
         });
         voiceView = (VoiceView) findViewById(R.id.voice_view);
-        voiceRecordHelper = new VoiceRecordHelper(new VoiceRecordHelper.VoiceChangedListener() {
-            @Override
-            public void onVolumeChanged(final int db) {
-//                Log.e("DB",db + "db");
-                int value = 0;
-                if (db < 20) {//去除噪音
-                    value = 0;
-                } else {
-                    value = db;
-                }
-                voiceView.setVolume(value);
-            }
-        });
 
         /**
          * dialog圆形背景数据
@@ -112,17 +98,29 @@ public class FloatTalkView extends RelativeLayout {
         this.onFloatTalkEvent = onFloatTalkEvent;
     }
 
-    public void onViewShow(){
-        voiceRecordHelper.startRecord();
+    public void showView(){
+        setVisibility(View.VISIBLE);
     }
 
     /**
      * 页面消失时需处理
      */
-    public void onViewDismiss(){
-        voiceView.hideAnimation();
-        voiceRecordHelper.stopRecord();
+    public void dismissView(){
+        if (getVisibility() == View.VISIBLE) {
+            setVisibility(GONE);
+            voiceView.hideAnimation();
+        }
     }
+
+
+    public void setVolume(int db){
+        voiceView.setVolume(db);
+    }
+
+    public interface OnFloatTalkEvent{
+        void clickOnQuestion();
+    }
+
     /**
      * 图片去圆角
      *
@@ -177,10 +175,4 @@ public class FloatTalkView extends RelativeLayout {
             e.printStackTrace();
         }
     }
-
-
-    public interface OnFloatTalkEvent{
-        void clickOnQuestion();
-    }
-
 }

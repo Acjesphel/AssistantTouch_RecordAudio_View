@@ -17,11 +17,12 @@ import android.widget.RelativeLayout;
  * Created by sharon on 2018/1/26.
  */
 
-public class FloatButtonLayout extends RelativeLayout implements View.OnClickListener{
+public class FloatButtonLayout extends RelativeLayout {
 
     private Context context;
     private ViewDragHelper viewDragHelper;
 
+    private View followView;
     private SpeechButton speechButton;
     private Handler handler;
 
@@ -29,41 +30,38 @@ public class FloatButtonLayout extends RelativeLayout implements View.OnClickLis
     private int dialogTop, talkViewHeight;
     private int layoutHeight, margin;
 
-    private OnButtonLayoutEvent onButtonLayoutEvent;
-
     private boolean isTriggerButton = false;
     private boolean isFirstInit = true;
 
-    public void setOnButtonLayoutEvent(OnButtonLayoutEvent onButtonLayoutEvent) {
-        this.onButtonLayoutEvent = onButtonLayoutEvent;
+    private SpeechButton.OnButtonTouch onButtonTouch;
+
+    public void setOnButtonTouchEvent(SpeechButton.OnButtonTouch onButtonTouchEvent){
+        this.onButtonTouch = onButtonTouchEvent;
     }
 
-    public interface OnButtonLayoutEvent {
-        void onButtonMove(int dialogTop);
-        void onButtonClick();
-        void onLayoutTouchDown();//点击layout时候需关闭dialog
+    public void setFollowView(View followView) {
+        this.followView = followView;
     }
 
     public FloatButtonLayout(Context context) {
         super(context);
         this.context = context;
-        initDragHelper();
+        init();
     }
 
     public FloatButtonLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
         this.context = context;
-        initDragHelper();
+        init();
     }
 
     public FloatButtonLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         this.context = context;
-        initDragHelper();
+        init();
     }
 
-
-    public void initDragHelper(){
+    private void init(){
         isFirstInit = true;
         //要求在按钮正上方或正在方距离margin 15dp
         margin = DensityUtil.dip2px(context, 15);
@@ -71,6 +69,26 @@ public class FloatButtonLayout extends RelativeLayout implements View.OnClickLis
         talkViewHeight = DensityUtil.dip2px(context, 160) + margin;
         halfButtonHeight = DensityUtil.dip2px(context, 42);
 
+        handler = new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                if (msg.what == 1) {
+                    if (followView != null) {
+                        //更改speech float的浮层位置
+                        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) followView.getLayoutParams();
+                        layoutParams.topMargin = dialogTop;
+                        followView.setLayoutParams(layoutParams);
+                    }
+                }
+            }
+        };
+
+
+        initDragHelper();
+    }
+
+    public void initDragHelper(){
         viewDragHelper = ViewDragHelper.create(this, new ViewDragHelper.Callback() {
             @Override
             public int clampViewPositionHorizontal(View child, int left, int dx) {
@@ -80,6 +98,7 @@ public class FloatButtonLayout extends RelativeLayout implements View.OnClickLis
             @Override
             public int clampViewPositionVertical(View child, int top, int dy) {
                 isTriggerButton = true;
+                speechButton.setMoving(true);
                 setTalkViewPosition(top);
                 return top;
             }
@@ -109,8 +128,8 @@ public class FloatButtonLayout extends RelativeLayout implements View.OnClickLis
                 }
 
                 viewDragHelper.settleCapturedViewAt(buttonLeft, buttonTop);
-                speechButton.setState(SpeechButton.ButtonState.Normal);
                 isTriggerButton = false;
+                speechButton.setMoving(false);
             }
 
             @Override
@@ -118,18 +137,6 @@ public class FloatButtonLayout extends RelativeLayout implements View.OnClickLis
                 return getHeight();
             }
         });
-
-        handler = new Handler(){
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                if (msg.what == 1) {
-                    if (onButtonLayoutEvent != null) {
-                        onButtonLayoutEvent.onButtonMove((int)msg.obj);
-                    }
-                }
-            }
-        };
 
     }
 
@@ -140,15 +147,16 @@ public class FloatButtonLayout extends RelativeLayout implements View.OnClickLis
         super.onLayout(changed, l, t, r, b);
         layoutHeight = getMeasuredHeight();
 
-        speechButton = (SpeechButton) findViewById(R.id.speech_button);
+        speechButton = (SpeechButton)getChildAt(0);
+        speechButton.setOnButtonTouch(onButtonTouch);
 
         if (isFirstInit) {
             //第一次按钮初始化位置在右下角
             buttonLeft = getWidth() - buttonHeight;
             buttonTop = layoutHeight - buttonHeight;
+            setTalkViewPosition(buttonTop);
             isFirstInit = false;
         }
-        speechButton.setOnClickListener(this);
         speechButton.offsetLeftAndRight(buttonLeft);
         speechButton.offsetTopAndBottom(buttonTop);
     }
@@ -167,11 +175,6 @@ public class FloatButtonLayout extends RelativeLayout implements View.OnClickLis
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         viewDragHelper.processTouchEvent(event);
-        if (event.getAction() == MotionEvent.ACTION_DOWN){
-            if (!isTriggerButton && onButtonLayoutEvent != null) {
-                onButtonLayoutEvent.onLayoutTouchDown();
-            }
-        }
         return true;
     }
 
@@ -189,30 +192,14 @@ public class FloatButtonLayout extends RelativeLayout implements View.OnClickLis
      */
     public void afterHideTalkView(){
         setBackgroundColor(Color.TRANSPARENT);
-        speechButton.setState(SpeechButton.ButtonState.Normal);
     }
-
-    @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.speech_button:
-                speechButton.startAnim();
-                setTalkViewPosition(buttonTop);
-                if (onButtonLayoutEvent != null) {
-                    onButtonLayoutEvent.onButtonClick();
-                }
-                break;
-        }
-    }
-
-
 
 
     /**
      * 当对话框显示时，移动button计算对话框当位置
      * @param btnTop button Y的位置
      */
-    private void setTalkViewPosition(final int btnTop) {
+    public void setTalkViewPosition(final int btnTop) {
         new Thread(new Runnable() {
             @Override
             public void run() {

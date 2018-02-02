@@ -6,10 +6,26 @@
     android:layout_height="match_parent"
     tools:context="com.acj.assistanttouchview.MainActivity">
 
-    <com.acj.assistanttouchview.IMSpeechLayout
-        android:id="@+id/im_speech_layout"
+    <com.acj.assistanttouchview.FloatButtonLayout
+        android:id="@+id/layout_talk"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent">
+
+        <com.acj.assistanttouchview.SpeechButton
+            android:id="@+id/speech_button"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:clickable="true"/>
+
+    </com.acj.assistanttouchview.FloatButtonLayout>
+
+    <com.acj.assistanttouchview.FloatTalkView
+        android:id="@+id/dialog_speech_talk"
+        android:layout_width="300dp"
+        android:layout_height="160dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:visibility="gone"/>
 
 
 </RelativeLayout>
